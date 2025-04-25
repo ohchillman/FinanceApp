@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../constants/colors';
-import { DIMENSIONS } from '../constants/dimensions';
+import { COLORS } from '../../constants/colors';
+import { DIMENSIONS } from '../../constants/dimensions';
 
 const Button = ({ 
   title, 
