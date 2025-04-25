@@ -8,6 +8,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import AddExpenseScreen from '../screens/expense/AddExpenseScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import SettingsScreen from '../screens/settings/CurrencySettingsScreen';
+import SubscriptionScreen from '../screens/settings/SubscriptionScreen';
 
 import { COLORS } from '../constants/colors';
 
@@ -62,6 +63,7 @@ const AnalyticsStack = () => (
     }}
   >
     <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'Аналитика' }} />
+    <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} options={{ title: 'Подписка' }} />
   </Stack.Navigator>
 );
 
@@ -79,6 +81,7 @@ const SettingsStack = () => (
     }}
   >
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Настройки' }} />
+    <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} options={{ title: 'Подписка' }} />
   </Stack.Navigator>
 );
 

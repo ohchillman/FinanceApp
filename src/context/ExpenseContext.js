@@ -4,7 +4,12 @@ import { BaseModel, types } from 'expo-sqlite-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // Create database connection
-const database = SQLite.openDatabase('expenses.db');
+const db = SQLite.openDatabase('expenses.db');
+
+// Define a function that returns the database
+const getDatabase = () => {
+  return db;
+};
 
 // Определение модели категории
 class Category extends BaseModel {
@@ -13,7 +18,7 @@ class Category extends BaseModel {
   }
 
   static get database() {
-    return database;
+    return getDatabase();
   }
 
   static get tableName() {
@@ -40,7 +45,7 @@ class Expense extends BaseModel {
   }
 
   static get database() {
-    return database;
+    return getDatabase();
   }
 
   static get tableName() {
