@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS } from '../constants/colors';
-import { DIMENSIONS } from '../constants/dimensions';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { COLORS } from '../../constants/colors';
+import { DIMENSIONS } from '../../constants/dimensions';
 
 const ExpenseForm = ({
   amount,
