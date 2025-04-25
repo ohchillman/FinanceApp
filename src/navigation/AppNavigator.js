@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 
@@ -9,7 +9,6 @@ import AddExpenseScreen from '../screens/expense/AddExpenseScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import SettingsScreen from '../screens/settings/CurrencySettingsScreen';
 
-import { View, Text } from 'react-native';
 import { COLORS } from '../constants/colors';
 
 const Tab = createBottomTabNavigator();
@@ -86,57 +85,55 @@ const SettingsStack = () => (
 // Основной навигатор приложения
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarActiveTintColor: COLORS.PRIMARY,
-          tabBarInactiveTintColor: COLORS.GRAY_500,
-          tabBarStyle: {
-            backgroundColor: COLORS.SURFACE,
-            borderTopColor: COLORS.GRAY_200,
-            paddingBottom: 5,
-            paddingTop: 5,
-          },
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: COLORS.PRIMARY,
+        tabBarInactiveTintColor: COLORS.GRAY_500,
+        tabBarStyle: {
+          backgroundColor: COLORS.SURFACE,
+          borderTopColor: COLORS.GRAY_200,
+          paddingBottom: 5,
+          paddingTop: 5,
+        },
+      }}
+    >
+      <Tab.Screen 
+        name="HomeTab" 
+        component={HomeStack} 
+        options={{
+          tabBarLabel: 'Главная',
+          headerShown: false,
+          // tabBarIcon будет добавлен позже
         }}
-      >
-        <Tab.Screen 
-          name="HomeTab" 
-          component={HomeStack} 
-          options={{
-            tabBarLabel: 'Главная',
-            headerShown: false,
-            // tabBarIcon будет добавлен позже
-          }}
-        />
-        <Tab.Screen 
-          name="AddExpenseTab" 
-          component={AddExpenseStack} 
-          options={{
-            tabBarLabel: 'Добавить',
-            headerShown: false,
-            // tabBarIcon будет добавлен позже
-          }}
-        />
-        <Tab.Screen 
-          name="AnalyticsTab" 
-          component={AnalyticsStack} 
-          options={{
-            tabBarLabel: 'Аналитика',
-            headerShown: false,
-            // tabBarIcon будет добавлен позже
-          }}
-        />
-        <Tab.Screen 
-          name="SettingsTab" 
-          component={SettingsStack} 
-          options={{
-            tabBarLabel: 'Настройки',
-            headerShown: false,
-            // tabBarIcon будет добавлен позже
-          }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+      />
+      <Tab.Screen 
+        name="AddExpenseTab" 
+        component={AddExpenseStack} 
+        options={{
+          tabBarLabel: 'Добавить',
+          headerShown: false,
+          // tabBarIcon будет добавлен позже
+        }}
+      />
+      <Tab.Screen 
+        name="AnalyticsTab" 
+        component={AnalyticsStack} 
+        options={{
+          tabBarLabel: 'Аналитика',
+          headerShown: false,
+          // tabBarIcon будет добавлен позже
+        }}
+      />
+      <Tab.Screen 
+        name="SettingsTab" 
+        component={SettingsStack} 
+        options={{
+          tabBarLabel: 'Настройки',
+          headerShown: false,
+          // tabBarIcon будет добавлен позже
+        }}
+      />
+    </Tab.Navigator>
   );
 };
 
