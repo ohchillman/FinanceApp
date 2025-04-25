@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as SQLite from 'expo-sqlite';
-import SQLiteStorage from 'react-native-sqlite-storage';
 import { BaseModel, types } from 'expo-sqlite-orm';
 import { v4 as uuidv4 } from 'uuid';
 
