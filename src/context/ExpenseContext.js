@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as SQLite from 'expo-sqlite';
+import { openDatabase } from 'expo-sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
 // Создаем контекст для расходов
@@ -17,7 +17,7 @@ export const ExpenseProvider = ({ children }) => {
   const [error, setError] = useState(null);
   
   // Инициализация базы данных
-  const db = SQLite.openDatabase('expenses.db');
+  const db = openDatabase('expenses.db');
   
   // Инициализация базы данных при первом рендере
   useEffect(() => {
