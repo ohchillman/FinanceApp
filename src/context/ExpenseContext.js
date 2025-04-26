@@ -21,54 +21,72 @@ export const ExpenseProvider = ({ children }) => {
   // Инициализация базы данных при первом рендере
   useEffect(() => {
     initDatabase();
-    
-    // Закрываем базу данных при размонтировании компонента
-    return () => {
-      if (db) {
-        db.closeAsync();
-      }
-    };
   }, []);
   
   // Функция инициализации базы данных
-  const initDatabase = async () => {
+  const initDatabase = () => {
     try {
       setLoading(true);
       
-      // Открываем базу данных
-      const database = await SQLite.openDatabaseAsync('expenses.db');
+      // Открываем базу данных - используем стандартный метод openDatabase
+      const database = SQLite.openDatabase('expenses.db');
       setDb(database);
       
       // Создаем таблицы
-      await database.execAsync(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id TEXT PRIMARY KEY NOT NULL,
-          name TEXT NOT NULL,
-          icon TEXT,
-          color TEXT,
-          is_default INTEGER DEFAULT 0,
-          created_at INTEGER,
-          updated_at INTEGER
+      database.transaction(tx => {
+        tx.executeSql(
+          `CREATE TABLE IF NOT EXISTS categories (
+            id TEXT PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL,
+            icon TEXT,
+            color TEXT,
+            is_default INTEGER DEFAULT 0,
+            created_at INTEGER,
+            updated_at INTEGER
+          );`,
+          [],
+          () => {
+            console.log('Categories table created successfully');
+          },
+          (_, error) => {
+            console.error('Error creating categories table:', error);
+            return false;
+          }
         );
         
-        CREATE TABLE IF NOT EXISTS expenses (
-          id TEXT PRIMARY KEY NOT NULL,
-          amount REAL NOT NULL,
-          currency TEXT,
-          category_id TEXT,
-          description TEXT,
-          date INTEGER,
-          created_at INTEGER,
-          updated_at INTEGER,
-          is_deleted INTEGER DEFAULT 0
+        tx.executeSql(
+          `CREATE TABLE IF NOT EXISTS expenses (
+            id TEXT PRIMARY KEY NOT NULL,
+            amount REAL NOT NULL,
+            currency TEXT,
+            category_id TEXT,
+            description TEXT,
+            date INTEGER,
+            created_at INTEGER,
+            updated_at INTEGER,
+            is_deleted INTEGER DEFAULT 0
+          );`,
+          [],
+          () => {
+            console.log('Expenses table created successfully');
+          },
+          (_, error) => {
+            console.error('Error creating expenses table:', error);
+            return false;
+          }
         );
-      `);
-      
-      // Загрузка категорий и расходов
-      await loadCategories(database);
-      await loadExpenses(database);
-      
-      setLoading(false);
+      }, 
+      (error) => {
+        console.error('Transaction error:', error);
+        setError('Failed to initialize database');
+        setLoading(false);
+      },
+      () => {
+        console.log('Database initialized successfully');
+        // Загрузка категорий и расходов
+        loadCategories();
+        loadExpenses();
+      });
     } catch (err) {
       console.error('Database initialization error:', err);
       setError('Failed to initialize database');
@@ -77,70 +95,110 @@ export const ExpenseProvider = ({ children }) => {
   };
   
   // Загрузка категорий из базы данных
-  const loadCategories = async (database) => {
+  const loadCategories = () => {
     try {
-      const dbToUse = database || db;
-      if (!dbToUse) throw new Error('Database not initialized');
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
       
-      const result = await dbToUse.getAllAsync('SELECT * FROM categories');
-      setCategories(result);
-      return result;
+      db.transaction(tx => {
+        tx.executeSql(
+          'SELECT * FROM categories',
+          [],
+          (_, { rows }) => {
+            const categoriesData = rows._array;
+            setCategories(categoriesData);
+          },
+          (_, error) => {
+            console.error('Error loading categories:', error);
+            setError('Failed to load categories');
+            return false;
+          }
+        );
+      });
     } catch (err) {
       console.error('Error loading categories:', err);
       setError('Failed to load categories');
-      throw err;
     }
   };
   
   // Загрузка расходов из базы данных
-  const loadExpenses = async (database) => {
+  const loadExpenses = () => {
     try {
-      const dbToUse = database || db;
-      if (!dbToUse) throw new Error('Database not initialized');
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
       
-      // Получаем все расходы, которые не удалены
-      const loadedExpenses = await dbToUse.getAllAsync(
-        'SELECT * FROM expenses WHERE is_deleted = 0 ORDER BY date DESC'
-      );
-      
-      // Для каждого расхода добавляем информацию о категории
-      const expensesWithCategories = await Promise.all(
-        loadedExpenses.map(async (expense) => {
-          if (expense.category_id) {
-            const category = await dbToUse.getFirstAsync(
-              'SELECT id, name, color FROM categories WHERE id = ?',
-              expense.category_id
+      db.transaction(tx => {
+        tx.executeSql(
+          'SELECT * FROM expenses WHERE is_deleted = 0 ORDER BY date DESC',
+          [],
+          async (_, { rows }) => {
+            const loadedExpenses = rows._array;
+            
+            // Для каждого расхода добавляем информацию о категории
+            const expensesWithCategories = await Promise.all(
+              loadedExpenses.map(expense => {
+                return new Promise((resolve) => {
+                  if (expense.category_id) {
+                    tx.executeSql(
+                      'SELECT id, name, color FROM categories WHERE id = ?',
+                      [expense.category_id],
+                      (_, { rows }) => {
+                        const category = rows._array[0];
+                        
+                        resolve({
+                          ...expense,
+                          date: new Date(expense.date),
+                          created_at: new Date(expense.created_at),
+                          updated_at: new Date(expense.updated_at),
+                          category: category ? {
+                            id: category.id,
+                            name: category.name,
+                            color: category.color
+                          } : null
+                        });
+                      },
+                      (_, error) => {
+                        console.error('Error loading category for expense:', error);
+                        resolve({
+                          ...expense,
+                          date: new Date(expense.date),
+                          created_at: new Date(expense.created_at),
+                          updated_at: new Date(expense.updated_at),
+                          category: null
+                        });
+                        return false;
+                      }
+                    );
+                  } else {
+                    resolve({
+                      ...expense,
+                      date: new Date(expense.date),
+                      created_at: new Date(expense.created_at),
+                      updated_at: new Date(expense.updated_at),
+                      category: null
+                    });
+                  }
+                });
+              })
             );
             
-            return {
-              ...expense,
-              date: new Date(expense.date),
-              created_at: new Date(expense.created_at),
-              updated_at: new Date(expense.updated_at),
-              category: category ? {
-                id: category.id,
-                name: category.name,
-                color: category.color
-              } : null
-            };
+            setExpenses(expensesWithCategories);
+            setLoading(false);
+          },
+          (_, error) => {
+            console.error('Error loading expenses:', error);
+            setError('Failed to load expenses');
+            setLoading(false);
+            return false;
           }
-          
-          return {
-            ...expense,
-            date: new Date(expense.date),
-            created_at: new Date(expense.created_at),
-            updated_at: new Date(expense.updated_at),
-            category: null
-          };
-        })
-      );
-      
-      setExpenses(expensesWithCategories);
-      return expensesWithCategories;
+        );
+      });
     } catch (err) {
       console.error('Error loading expenses:', err);
       setError('Failed to load expenses');
-      throw err;
+      setLoading(false);
     }
   };
   
@@ -159,23 +217,33 @@ export const ExpenseProvider = ({ children }) => {
         is_deleted: 0
       };
       
-      // Создаем запись в базе данных
-      await db.runAsync(
-        'INSERT INTO expenses (id, amount, currency, category_id, description, date, created_at, updated_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        newExpense.id,
-        newExpense.amount,
-        newExpense.currency,
-        newExpense.category_id,
-        newExpense.description,
-        newExpense.date,
-        newExpense.created_at,
-        newExpense.updated_at,
-        newExpense.is_deleted
-      );
-      
-      // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
-      return newExpense;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'INSERT INTO expenses (id, amount, currency, category_id, description, date, created_at, updated_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              newExpense.id,
+              newExpense.amount,
+              newExpense.currency,
+              newExpense.category_id,
+              newExpense.description,
+              newExpense.date,
+              newExpense.created_at,
+              newExpense.updated_at,
+              newExpense.is_deleted
+            ],
+            (_, result) => {
+              loadExpenses();
+              resolve(newExpense);
+            },
+            (_, error) => {
+              console.error('Error adding expense:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error adding expense:', err);
       setError('Failed to add expense');
@@ -188,35 +256,56 @@ export const ExpenseProvider = ({ children }) => {
     try {
       if (!db) throw new Error('Database not initialized');
       
-      // Находим запись в базе данных
-      const expense = await db.getFirstAsync('SELECT * FROM expenses WHERE id = ?', id);
-      if (!expense) {
-        throw new Error('Expense not found');
-      }
-      
-      const now = Date.now();
-      const updatedExpense = {
-        ...expense,
-        ...expenseData,
-        date: expenseData.date ? expenseData.date.getTime() : expense.date,
-        updated_at: now
-      };
-      
-      // Обновляем запись в базе данных
-      await db.runAsync(
-        'UPDATE expenses SET amount = ?, currency = ?, category_id = ?, description = ?, date = ?, updated_at = ? WHERE id = ?',
-        updatedExpense.amount,
-        updatedExpense.currency,
-        updatedExpense.category_id,
-        updatedExpense.description,
-        updatedExpense.date,
-        updatedExpense.updated_at,
-        id
-      );
-      
-      // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
-      return updatedExpense;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'SELECT * FROM expenses WHERE id = ?',
+            [id],
+            (_, { rows }) => {
+              if (rows.length === 0) {
+                reject(new Error('Expense not found'));
+                return;
+              }
+              
+              const expense = rows._array[0];
+              const now = Date.now();
+              const updatedExpense = {
+                ...expense,
+                ...expenseData,
+                date: expenseData.date ? expenseData.date.getTime() : expense.date,
+                updated_at: now
+              };
+              
+              tx.executeSql(
+                'UPDATE expenses SET amount = ?, currency = ?, category_id = ?, description = ?, date = ?, updated_at = ? WHERE id = ?',
+                [
+                  updatedExpense.amount,
+                  updatedExpense.currency,
+                  updatedExpense.category_id,
+                  updatedExpense.description,
+                  updatedExpense.date,
+                  updatedExpense.updated_at,
+                  id
+                ],
+                (_, result) => {
+                  loadExpenses();
+                  resolve(updatedExpense);
+                },
+                (_, error) => {
+                  console.error('Error updating expense:', error);
+                  reject(error);
+                  return false;
+                }
+              );
+            },
+            (_, error) => {
+              console.error('Error finding expense:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error updating expense:', err);
       setError('Failed to update expense');
@@ -229,23 +318,40 @@ export const ExpenseProvider = ({ children }) => {
     try {
       if (!db) throw new Error('Database not initialized');
       
-      // Находим запись в базе данных
-      const expense = await db.getFirstAsync('SELECT * FROM expenses WHERE id = ?', id);
-      if (!expense) {
-        throw new Error('Expense not found');
-      }
-      
-      // Помечаем как удаленную
-      const now = Date.now();
-      await db.runAsync(
-        'UPDATE expenses SET is_deleted = 1, updated_at = ? WHERE id = ?',
-        now,
-        id
-      );
-      
-      // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
-      return true;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'SELECT * FROM expenses WHERE id = ?',
+            [id],
+            (_, { rows }) => {
+              if (rows.length === 0) {
+                reject(new Error('Expense not found'));
+                return;
+              }
+              
+              const now = Date.now();
+              tx.executeSql(
+                'UPDATE expenses SET is_deleted = 1, updated_at = ? WHERE id = ?',
+                [now, id],
+                (_, result) => {
+                  loadExpenses();
+                  resolve(true);
+                },
+                (_, error) => {
+                  console.error('Error deleting expense:', error);
+                  reject(error);
+                  return false;
+                }
+              );
+            },
+            (_, error) => {
+              console.error('Error finding expense:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error deleting expense:', err);
       setError('Failed to delete expense');
@@ -267,21 +373,31 @@ export const ExpenseProvider = ({ children }) => {
         is_default: categoryData.is_default ? 1 : 0
       };
       
-      // Создаем запись в базе данных
-      await db.runAsync(
-        'INSERT INTO categories (id, name, icon, color, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        newCategory.id,
-        newCategory.name,
-        newCategory.icon,
-        newCategory.color,
-        newCategory.is_default,
-        newCategory.created_at,
-        newCategory.updated_at
-      );
-      
-      // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
-      return newCategory;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'INSERT INTO categories (id, name, icon, color, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              newCategory.id,
+              newCategory.name,
+              newCategory.icon,
+              newCategory.color,
+              newCategory.is_default,
+              newCategory.created_at,
+              newCategory.updated_at
+            ],
+            (_, result) => {
+              loadCategories();
+              resolve(newCategory);
+            },
+            (_, error) => {
+              console.error('Error adding category:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error adding category:', err);
       setError('Failed to add category');
@@ -294,34 +410,55 @@ export const ExpenseProvider = ({ children }) => {
     try {
       if (!db) throw new Error('Database not initialized');
       
-      // Находим запись в базе данных
-      const category = await db.getFirstAsync('SELECT * FROM categories WHERE id = ?', id);
-      if (!category) {
-        throw new Error('Category not found');
-      }
-      
-      const now = Date.now();
-      const updatedCategory = {
-        ...category,
-        ...categoryData,
-        updated_at: now,
-        is_default: categoryData.is_default ? 1 : 0
-      };
-      
-      // Обновляем запись в базе данных
-      await db.runAsync(
-        'UPDATE categories SET name = ?, icon = ?, color = ?, is_default = ?, updated_at = ? WHERE id = ?',
-        updatedCategory.name,
-        updatedCategory.icon,
-        updatedCategory.color,
-        updatedCategory.is_default,
-        updatedCategory.updated_at,
-        id
-      );
-      
-      // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
-      return updatedCategory;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'SELECT * FROM categories WHERE id = ?',
+            [id],
+            (_, { rows }) => {
+              if (rows.length === 0) {
+                reject(new Error('Category not found'));
+                return;
+              }
+              
+              const category = rows._array[0];
+              const now = Date.now();
+              const updatedCategory = {
+                ...category,
+                ...categoryData,
+                updated_at: now,
+                is_default: categoryData.is_default ? 1 : 0
+              };
+              
+              tx.executeSql(
+                'UPDATE categories SET name = ?, icon = ?, color = ?, is_default = ?, updated_at = ? WHERE id = ?',
+                [
+                  updatedCategory.name,
+                  updatedCategory.icon,
+                  updatedCategory.color,
+                  updatedCategory.is_default,
+                  updatedCategory.updated_at,
+                  id
+                ],
+                (_, result) => {
+                  loadCategories();
+                  resolve(updatedCategory);
+                },
+                (_, error) => {
+                  console.error('Error updating category:', error);
+                  reject(error);
+                  return false;
+                }
+              );
+            },
+            (_, error) => {
+              console.error('Error finding category:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error updating category:', err);
       setError('Failed to update category');
@@ -334,18 +471,39 @@ export const ExpenseProvider = ({ children }) => {
     try {
       if (!db) throw new Error('Database not initialized');
       
-      // Находим запись в базе данных
-      const category = await db.getFirstAsync('SELECT * FROM categories WHERE id = ?', id);
-      if (!category) {
-        throw new Error('Category not found');
-      }
-      
-      // Удаляем категорию
-      await db.runAsync('DELETE FROM categories WHERE id = ?', id);
-      
-      // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
-      return true;
+      return new Promise((resolve, reject) => {
+        db.transaction(tx => {
+          tx.executeSql(
+            'SELECT * FROM categories WHERE id = ?',
+            [id],
+            (_, { rows }) => {
+              if (rows.length === 0) {
+                reject(new Error('Category not found'));
+                return;
+              }
+              
+              tx.executeSql(
+                'DELETE FROM categories WHERE id = ?',
+                [id],
+                (_, result) => {
+                  loadCategories();
+                  resolve(true);
+                },
+                (_, error) => {
+                  console.error('Error deleting category:', error);
+                  reject(error);
+                  return false;
+                }
+              );
+            },
+            (_, error) => {
+              console.error('Error finding category:', error);
+              reject(error);
+              return false;
+            }
+          );
+        });
+      });
     } catch (err) {
       console.error('Error deleting category:', err);
       setError('Failed to delete category');
@@ -396,9 +554,8 @@ export const ExpenseProvider = ({ children }) => {
     getTotalByPeriod,
     refreshData: async () => {
       setLoading(true);
-      await loadCategories();
-      await loadExpenses();
-      setLoading(false);
+      loadCategories();
+      loadExpenses();
     }
   };
   

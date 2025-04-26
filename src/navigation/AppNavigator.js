@@ -1,11 +1,14 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Импорт экранов из соответствующих директорий
 import HomeScreen from '../screens/home/HomeScreen';
+import ExpensesListScreen from '../screens/expense/ExpensesListScreen';
 import AddExpenseScreen from '../screens/expense/AddExpenseScreen';
+import TextRecognitionScreen from '../screens/expense/TextRecognitionScreen';
+import VoiceRecognitionScreen from '../screens/expense/VoiceRecognitionScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import SettingsScreen from '../screens/settings/CurrencySettingsScreen';
 import SubscriptionScreen from '../screens/settings/SubscriptionScreen';
@@ -28,7 +31,24 @@ const HomeStack = () => (
       },
     }}
   >
-    <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Мои расходы' }} />
+    <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Главная' }} />
+  </Stack.Navigator>
+);
+
+// Стек навигации для экрана списка расходов
+const ExpensesListStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerStyle: {
+        backgroundColor: COLORS.PRIMARY,
+      },
+      headerTintColor: COLORS.TEXT_INVERSE,
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+    }}
+  >
+    <Stack.Screen name="ExpensesList" component={ExpensesListScreen} options={{ title: 'Мои расходы' }} />
   </Stack.Navigator>
 );
 
@@ -46,6 +66,40 @@ const AddExpenseStack = () => (
     }}
   >
     <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ title: 'Добавить расход' }} />
+  </Stack.Navigator>
+);
+
+// Стек навигации для экрана текстового распознавания
+const TextRecognitionStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerStyle: {
+        backgroundColor: COLORS.PRIMARY,
+      },
+      headerTintColor: COLORS.TEXT_INVERSE,
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+    }}
+  >
+    <Stack.Screen name="TextRecognition" component={TextRecognitionScreen} options={{ title: 'Распознавание текста' }} />
+  </Stack.Navigator>
+);
+
+// Стек навигации для экрана голосового распознавания
+const VoiceRecognitionStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerStyle: {
+        backgroundColor: COLORS.PRIMARY,
+      },
+      headerTintColor: COLORS.TEXT_INVERSE,
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+    }}
+  >
+    <Stack.Screen name="VoiceRecognition" component={VoiceRecognitionScreen} options={{ title: 'Голосовой ввод' }} />
   </Stack.Navigator>
 );
 
@@ -106,7 +160,28 @@ const AppNavigator = () => {
         options={{
           tabBarLabel: 'Главная',
           headerShown: false,
-          // tabBarIcon будет добавлен позже
+          tabBarIcon: ({ color, size }) => (
+            <Image 
+              source={require('../../assets/icons/home.png')}
+              style={{ width: size, height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="ExpensesListTab" 
+        component={ExpensesListStack} 
+        options={{
+          tabBarLabel: 'Расходы',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Image 
+              source={require('../../assets/icons/list.png')}
+              style={{ width: size, height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tab.Screen 
@@ -115,7 +190,13 @@ const AppNavigator = () => {
         options={{
           tabBarLabel: 'Добавить',
           headerShown: false,
-          // tabBarIcon будет добавлен позже
+          tabBarIcon: ({ color, size }) => (
+            <Image 
+              source={require('../../assets/icons/plus.png')}
+              style={{ width: size, height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tab.Screen 
@@ -124,7 +205,13 @@ const AppNavigator = () => {
         options={{
           tabBarLabel: 'Аналитика',
           headerShown: false,
-          // tabBarIcon будет добавлен позже
+          tabBarIcon: ({ color, size }) => (
+            <Image 
+              source={require('../../assets/icons/chart.png')}
+              style={{ width: size, height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tab.Screen 
@@ -133,7 +220,31 @@ const AppNavigator = () => {
         options={{
           tabBarLabel: 'Настройки',
           headerShown: false,
-          // tabBarIcon будет добавлен позже
+          tabBarIcon: ({ color, size }) => (
+            <Image 
+              source={require('../../assets/icons/settings.png')}
+              style={{ width: size, height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
+      
+      {/* Скрытые табы для навигации */}
+      <Tab.Screen 
+        name="TextRecognitionTab" 
+        component={TextRecognitionStack} 
+        options={{
+          tabBarButton: () => null,
+          headerShown: false,
+        }}
+      />
+      <Tab.Screen 
+        name="VoiceRecognitionTab" 
+        component={VoiceRecognitionStack} 
+        options={{
+          tabBarButton: () => null,
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
