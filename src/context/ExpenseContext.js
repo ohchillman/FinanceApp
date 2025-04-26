@@ -33,60 +33,64 @@ export const ExpenseProvider = ({ children }) => {
       setDb(database);
       
       // Создаем таблицы
-      database.transaction(tx => {
-        tx.executeSql(
-          `CREATE TABLE IF NOT EXISTS categories (
-            id TEXT PRIMARY KEY NOT NULL,
-            name TEXT NOT NULL,
-            icon TEXT,
-            color TEXT,
-            is_default INTEGER DEFAULT 0,
-            created_at INTEGER,
-            updated_at INTEGER
-          );`,
-          [],
-          () => {
-            console.log('Categories table created successfully');
-          },
-          (_, error) => {
-            console.error('Error creating categories table:', error);
-            return false;
-          }
-        );
-        
-        tx.executeSql(
-          `CREATE TABLE IF NOT EXISTS expenses (
-            id TEXT PRIMARY KEY NOT NULL,
-            amount REAL NOT NULL,
-            currency TEXT,
-            category_id TEXT,
-            description TEXT,
-            date INTEGER,
-            created_at INTEGER,
-            updated_at INTEGER,
-            is_deleted INTEGER DEFAULT 0
-          );`,
-          [],
-          () => {
-            console.log('Expenses table created successfully');
-          },
-          (_, error) => {
-            console.error('Error creating expenses table:', error);
-            return false;
-          }
-        );
-      }, 
-      (error) => {
-        console.error('Transaction error:', error);
-        setError('Failed to initialize database');
-        setLoading(false);
-      },
-      () => {
-        console.log('Database initialized successfully');
-        // Загрузка категорий и расходов
-        loadCategories();
-        loadExpenses();
-      });
+      if (database) {
+        database.transaction(tx => {
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS categories (
+              id TEXT PRIMARY KEY NOT NULL,
+              name TEXT NOT NULL,
+              icon TEXT,
+              color TEXT,
+              is_default INTEGER DEFAULT 0,
+              created_at INTEGER,
+              updated_at INTEGER
+            );`,
+            [],
+            () => {
+              console.log('Categories table created successfully');
+            },
+            (_, error) => {
+              console.error('Error creating categories table:', error);
+              return false;
+            }
+          );
+          
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS expenses (
+              id TEXT PRIMARY KEY NOT NULL,
+              amount REAL NOT NULL,
+              currency TEXT,
+              category_id TEXT,
+              description TEXT,
+              date INTEGER,
+              created_at INTEGER,
+              updated_at INTEGER,
+              is_deleted INTEGER DEFAULT 0
+            );`,
+            [],
+            () => {
+              console.log('Expenses table created successfully');
+            },
+            (_, error) => {
+              console.error('Error creating expenses table:', error);
+              return false;
+            }
+          );
+        }, 
+        (error) => {
+          console.error('Transaction error:', error);
+          setError('Failed to initialize database');
+          setLoading(false);
+        },
+        () => {
+          console.log('Database initialized successfully');
+          // Загрузка категорий и расходов
+          loadCategories(database);
+          loadExpenses(database);
+        });
+      } else {
+        throw new Error('Failed to open database');
+      }
     } catch (err) {
       console.error('Database initialization error:', err);
       setError('Failed to initialize database');
@@ -95,13 +99,14 @@ export const ExpenseProvider = ({ children }) => {
   };
   
   // Загрузка категорий из базы данных
-  const loadCategories = () => {
+  const loadCategories = (database) => {
     try {
-      if (!db) {
+      const dbToUse = database || db;
+      if (!dbToUse) {
         throw new Error('Database not initialized');
       }
       
-      db.transaction(tx => {
+      dbToUse.transaction(tx => {
         tx.executeSql(
           'SELECT * FROM categories',
           [],
@@ -123,13 +128,14 @@ export const ExpenseProvider = ({ children }) => {
   };
   
   // Загрузка расходов из базы данных
-  const loadExpenses = () => {
+  const loadExpenses = (database) => {
     try {
-      if (!db) {
+      const dbToUse = database || db;
+      if (!dbToUse) {
         throw new Error('Database not initialized');
       }
       
-      db.transaction(tx => {
+      dbToUse.transaction(tx => {
         tx.executeSql(
           'SELECT * FROM expenses WHERE is_deleted = 0 ORDER BY date DESC',
           [],

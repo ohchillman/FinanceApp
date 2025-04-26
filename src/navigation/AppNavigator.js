@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 
@@ -149,8 +149,16 @@ const AppNavigator = () => {
         tabBarStyle: {
           backgroundColor: COLORS.SURFACE,
           borderTopColor: COLORS.GRAY_200,
+          height: 60,
           paddingBottom: 5,
           paddingTop: 5,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginBottom: 5,
+        },
+        tabBarIconStyle: {
+          marginTop: 5,
         },
       }}
     >
@@ -163,7 +171,8 @@ const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/home.png')}
-              style={{ width: size, height: size, tintColor: color }}
+              style={styles.tabIcon}
+              tintColor={color}
               resizeMode="contain"
             />
           ),
@@ -178,7 +187,8 @@ const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/list.png')}
-              style={{ width: size, height: size, tintColor: color }}
+              style={styles.tabIcon}
+              tintColor={color}
               resizeMode="contain"
             />
           ),
@@ -193,7 +203,8 @@ const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/plus.png')}
-              style={{ width: size, height: size, tintColor: color }}
+              style={styles.tabIcon}
+              tintColor={color}
               resizeMode="contain"
             />
           ),
@@ -208,7 +219,8 @@ const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/chart.png')}
-              style={{ width: size, height: size, tintColor: color }}
+              style={styles.tabIcon}
+              tintColor={color}
               resizeMode="contain"
             />
           ),
@@ -223,7 +235,8 @@ const AppNavigator = () => {
           tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/settings.png')}
-              style={{ width: size, height: size, tintColor: color }}
+              style={styles.tabIcon}
+              tintColor={color}
               resizeMode="contain"
             />
           ),
@@ -250,5 +263,12 @@ const AppNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    width: 24,
+    height: 24,
+  }
+});
 
 export default AppNavigator;
