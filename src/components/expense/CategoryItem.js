@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { DIMENSIONS } from '../../constants/dimensions';
 
@@ -21,8 +22,7 @@ const CategoryItem = ({
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: category.color }]}>
-        {/* Здесь будет иконка категории */}
-        <Text style={styles.iconPlaceholder}>{category.name.charAt(0)}</Text>
+        <Ionicons name={category.icon} size={20} color={COLORS.TEXT_INVERSE} />
       </View>
       <Text style={styles.name}>{category.name}</Text>
     </TouchableOpacity>

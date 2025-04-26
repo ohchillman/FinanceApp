@@ -10,7 +10,7 @@ class Category extends BaseModel {
   }
 
   static get database() {
-    return async () => SQLite.openDatabase('expenses.db');
+    return () => SQLite.openDatabase('expenses.db');
   }
 
   static get tableName() {
@@ -37,7 +37,7 @@ class Expense extends BaseModel {
   }
 
   static get database() {
-    return async () => SQLite.openDatabase('expenses.db');
+    return () => SQLite.openDatabase('expenses.db');
   }
 
   static get tableName() {
