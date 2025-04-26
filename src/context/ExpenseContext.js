@@ -1,66 +1,34 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as SQLite from 'expo-sqlite';
-import { BaseModel, types } from 'expo-sqlite-orm';
+import * as SQLite from 'expo-sqlite/legacy';
+import { Database, Repository, columnTypes } from 'expo-sqlite-orm';
 import { v4 as uuidv4 } from 'uuid';
 
-// Create database connection
-const db = SQLite.openDatabase('expenses.db');
+// Определение маппинга колонок для категорий
+const categoryColumnMapping = {
+  id: { type: columnTypes.TEXT, primary_key: true },
+  name: { type: columnTypes.TEXT, not_null: true },
+  icon: { type: columnTypes.TEXT },
+  color: { type: columnTypes.TEXT },
+  is_default: { type: columnTypes.INTEGER, default: 0 },
+  created_at: { type: columnTypes.INTEGER },
+  updated_at: { type: columnTypes.INTEGER }
+};
 
-// Определение модели категории
-class Category extends BaseModel {
-  constructor(obj) {
-    super(obj);
-  }
+// Определение маппинга колонок для расходов
+const expenseColumnMapping = {
+  id: { type: columnTypes.TEXT, primary_key: true },
+  amount: { type: columnTypes.REAL, not_null: true },
+  currency: { type: columnTypes.TEXT },
+  category_id: { type: columnTypes.TEXT },
+  description: { type: columnTypes.TEXT },
+  date: { type: columnTypes.INTEGER },
+  created_at: { type: columnTypes.INTEGER },
+  updated_at: { type: columnTypes.INTEGER },
+  is_deleted: { type: columnTypes.INTEGER, default: 0 }
+};
 
-  static get database() {
-    return db;
-  }
-
-  static get tableName() {
-    return 'categories';
-  }
-
-  static get columnMapping() {
-    return {
-      id: { type: types.TEXT, primary_key: true },
-      name: { type: types.TEXT, not_null: true },
-      icon: { type: types.TEXT },
-      color: { type: types.TEXT },
-      is_default: { type: types.INTEGER, default: 0 },
-      created_at: { type: types.INTEGER },
-      updated_at: { type: types.INTEGER }
-    };
-  }
-}
-
-// Определение модели расхода
-class Expense extends BaseModel {
-  constructor(obj) {
-    super(obj);
-  }
-
-  static get database() {
-    return db;
-  }
-
-  static get tableName() {
-    return 'expenses';
-  }
-
-  static get columnMapping() {
-    return {
-      id: { type: types.TEXT, primary_key: true },
-      amount: { type: types.REAL, not_null: true },
-      currency: { type: types.TEXT },
-      category_id: { type: types.TEXT },
-      description: { type: types.TEXT },
-      date: { type: types.INTEGER },
-      created_at: { type: types.INTEGER },
-      updated_at: { type: types.INTEGER },
-      is_deleted: { type: types.INTEGER, default: 0 }
-    };
-  }
-}
+// Имя базы данных
+const DATABASE_NAME = 'expenses.db';
 
 // Создаем контекст для расходов
 const ExpenseContext = createContext();
@@ -75,6 +43,9 @@ export const ExpenseProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   // Состояние для отслеживания ошибок
   const [error, setError] = useState(null);
+  // Репозитории для работы с данными
+  const [categoryRepository, setCategoryRepository] = useState(null);
+  const [expenseRepository, setExpenseRepository] = useState(null);
   
   // Инициализация базы данных при первом рендере
   useEffect(() => {
@@ -86,17 +57,60 @@ export const ExpenseProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      // Создание таблиц через ORM
-      await Category.createTable();
-      await Expense.createTable();
+      // Создаем репозитории для работы с данными
+      const catRepo = new Repository(DATABASE_NAME, 'categories', categoryColumnMapping);
+      const expRepo = new Repository(DATABASE_NAME, 'expenses', expenseColumnMapping);
       
-      console.log('Database tables created successfully');
+      setCategoryRepository(catRepo);
+      setExpenseRepository(expRepo);
       
-      // Загрузка категорий и расходов
-      await loadCategories();
-      await loadExpenses();
+      // Создание таблиц через выполнение SQL-запросов
+      const db = Database.instance(DATABASE_NAME);
       
-      setLoading(false);
+      db.transaction(
+        tx => {
+          // Создание таблицы категорий
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS categories (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              icon TEXT,
+              color TEXT,
+              is_default INTEGER DEFAULT 0,
+              created_at INTEGER,
+              updated_at INTEGER
+            );`
+          );
+          
+          // Создание таблицы расходов
+          tx.executeSql(
+            `CREATE TABLE IF NOT EXISTS expenses (
+              id TEXT PRIMARY KEY,
+              amount REAL NOT NULL,
+              currency TEXT,
+              category_id TEXT,
+              description TEXT,
+              date INTEGER,
+              created_at INTEGER,
+              updated_at INTEGER,
+              is_deleted INTEGER DEFAULT 0
+            );`
+          );
+        },
+        error => {
+          console.error('Error creating tables:', error);
+          setError('Failed to create database tables');
+        },
+        async () => {
+          console.log('Database tables created successfully');
+          
+          // Загрузка категорий и расходов
+          await loadCategories(catRepo);
+          await loadExpenses(expRepo);
+          
+          setLoading(false);
+        }
+      );
     } catch (err) {
       console.error('Database initialization error:', err);
       setError('Failed to initialize database');
@@ -105,9 +119,9 @@ export const ExpenseProvider = ({ children }) => {
   };
   
   // Загрузка категорий из базы данных
-  const loadCategories = async () => {
+  const loadCategories = async (repo) => {
     try {
-      const loadedCategories = await Category.query();
+      const loadedCategories = await repo.query();
       setCategories(loadedCategories);
       return loadedCategories;
     } catch (err) {
@@ -118,10 +132,10 @@ export const ExpenseProvider = ({ children }) => {
   };
   
   // Загрузка расходов из базы данных
-  const loadExpenses = async () => {
+  const loadExpenses = async (repo) => {
     try {
       // Получаем все расходы, которые не удалены
-      const loadedExpenses = await Expense.query({
+      const loadedExpenses = await repo.query({
         where: {
           is_deleted: 0
         },
@@ -133,8 +147,8 @@ export const ExpenseProvider = ({ children }) => {
       // Для каждого расхода добавляем информацию о категории
       const expensesWithCategories = await Promise.all(
         loadedExpenses.map(async (expense) => {
-          if (expense.category_id) {
-            const category = await Category.find(expense.category_id);
+          if (expense.category_id && categoryRepository) {
+            const category = await categoryRepository.find(expense.category_id);
             return {
               ...expense,
               date: new Date(expense.date),
@@ -169,6 +183,10 @@ export const ExpenseProvider = ({ children }) => {
   // Добавление нового расхода
   const addExpense = async (expenseData) => {
     try {
+      if (!expenseRepository) {
+        throw new Error('Expense repository not initialized');
+      }
+      
       const now = Date.now();
       const newExpense = {
         id: uuidv4(),
@@ -180,11 +198,10 @@ export const ExpenseProvider = ({ children }) => {
       };
       
       // Создаем запись в базе данных
-      const expense = new Expense(newExpense);
-      await expense.save();
+      await expenseRepository.insert(newExpense);
       
       // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
+      await loadExpenses(expenseRepository);
       return newExpense;
     } catch (err) {
       console.error('Error adding expense:', err);
@@ -196,24 +213,29 @@ export const ExpenseProvider = ({ children }) => {
   // Обновление существующего расхода
   const updateExpense = async (id, expenseData) => {
     try {
-      const now = Date.now();
-      const updatedExpense = {
-        ...expenseData,
-        date: expenseData.date ? expenseData.date.getTime() : now,
-        updated_at: now
-      };
+      if (!expenseRepository) {
+        throw new Error('Expense repository not initialized');
+      }
       
-      // Находим и обновляем запись в базе данных
-      const expense = await Expense.find(id);
+      // Находим запись в базе данных
+      const expense = await expenseRepository.find(id);
       if (!expense) {
         throw new Error('Expense not found');
       }
       
-      Object.assign(expense, updatedExpense);
-      await expense.save();
+      const now = Date.now();
+      const updatedExpense = {
+        ...expense,
+        ...expenseData,
+        date: expenseData.date ? expenseData.date.getTime() : expense.date,
+        updated_at: now
+      };
+      
+      // Обновляем запись в базе данных
+      await expenseRepository.update(updatedExpense);
       
       // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
+      await loadExpenses(expenseRepository);
       return updatedExpense;
     } catch (err) {
       console.error('Error updating expense:', err);
@@ -225,21 +247,28 @@ export const ExpenseProvider = ({ children }) => {
   // Удаление расхода (мягкое удаление)
   const deleteExpense = async (id) => {
     try {
-      const now = Date.now();
+      if (!expenseRepository) {
+        throw new Error('Expense repository not initialized');
+      }
       
       // Находим запись в базе данных
-      const expense = await Expense.find(id);
+      const expense = await expenseRepository.find(id);
       if (!expense) {
         throw new Error('Expense not found');
       }
       
       // Помечаем как удаленную
-      expense.is_deleted = 1;
-      expense.updated_at = now;
-      await expense.save();
+      const now = Date.now();
+      const updatedExpense = {
+        ...expense,
+        is_deleted: 1,
+        updated_at: now
+      };
+      
+      await expenseRepository.update(updatedExpense);
       
       // Перезагружаем расходы для получения актуальных данных
-      await loadExpenses();
+      await loadExpenses(expenseRepository);
       return true;
     } catch (err) {
       console.error('Error deleting expense:', err);
@@ -251,6 +280,10 @@ export const ExpenseProvider = ({ children }) => {
   // Добавление новой категории
   const addCategory = async (categoryData) => {
     try {
+      if (!categoryRepository) {
+        throw new Error('Category repository not initialized');
+      }
+      
       const now = Date.now();
       const newCategory = {
         id: uuidv4(),
@@ -261,11 +294,10 @@ export const ExpenseProvider = ({ children }) => {
       };
       
       // Создаем запись в базе данных
-      const category = new Category(newCategory);
-      await category.save();
+      await categoryRepository.insert(newCategory);
       
       // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
+      await loadCategories(categoryRepository);
       return newCategory;
     } catch (err) {
       console.error('Error adding category:', err);
@@ -277,24 +309,29 @@ export const ExpenseProvider = ({ children }) => {
   // Обновление существующей категории
   const updateCategory = async (id, categoryData) => {
     try {
+      if (!categoryRepository) {
+        throw new Error('Category repository not initialized');
+      }
+      
+      // Находим запись в базе данных
+      const category = await categoryRepository.find(id);
+      if (!category) {
+        throw new Error('Category not found');
+      }
+      
       const now = Date.now();
       const updatedCategory = {
+        ...category,
         ...categoryData,
         updated_at: now,
         is_default: categoryData.is_default ? 1 : 0
       };
       
-      // Находим и обновляем запись в базе данных
-      const category = await Category.find(id);
-      if (!category) {
-        throw new Error('Category not found');
-      }
-      
-      Object.assign(category, updatedCategory);
-      await category.save();
+      // Обновляем запись в базе данных
+      await categoryRepository.update(updatedCategory);
       
       // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
+      await loadCategories(categoryRepository);
       return updatedCategory;
     } catch (err) {
       console.error('Error updating category:', err);
@@ -306,17 +343,21 @@ export const ExpenseProvider = ({ children }) => {
   // Удаление категории
   const deleteCategory = async (id) => {
     try {
+      if (!categoryRepository) {
+        throw new Error('Category repository not initialized');
+      }
+      
       // Находим запись в базе данных
-      const category = await Category.find(id);
+      const category = await categoryRepository.find(id);
       if (!category) {
         throw new Error('Category not found');
       }
       
       // Удаляем категорию
-      await category.destroy();
+      await categoryRepository.destroy(id);
       
       // Перезагружаем категории для получения актуальных данных
-      await loadCategories();
+      await loadCategories(categoryRepository);
       return true;
     } catch (err) {
       console.error('Error deleting category:', err);
@@ -368,8 +409,10 @@ export const ExpenseProvider = ({ children }) => {
     getTotalByPeriod,
     refreshData: async () => {
       setLoading(true);
-      await loadCategories();
-      await loadExpenses();
+      if (categoryRepository && expenseRepository) {
+        await loadCategories(categoryRepository);
+        await loadExpenses(expenseRepository);
+      }
       setLoading(false);
     }
   };
