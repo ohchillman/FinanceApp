@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as SQLite from 'expo-sqlite/legacy';
+import * as SQLite from 'expo-sqlite';
 import { Database, Repository, columnTypes } from 'expo-sqlite-orm';
 import { v4 as uuidv4 } from 'uuid';
 
