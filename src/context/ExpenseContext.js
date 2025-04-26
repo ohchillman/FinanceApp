@@ -6,11 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 // Create database connection
 const db = SQLite.openDatabase('expenses.db');
 
-// Define a function that returns the database
-const getDatabase = () => {
-  return db;
-};
-
 // Определение модели категории
 class Category extends BaseModel {
   constructor(obj) {
@@ -18,7 +13,7 @@ class Category extends BaseModel {
   }
 
   static get database() {
-    return getDatabase();
+    return db;
   }
 
   static get tableName() {
@@ -45,7 +40,7 @@ class Expense extends BaseModel {
   }
 
   static get database() {
-    return getDatabase();
+    return db;
   }
 
   static get tableName() {
