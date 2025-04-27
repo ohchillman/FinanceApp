@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { Image, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -140,73 +140,43 @@ const SettingsStack = () => (
   </Stack.Navigator>
 );
 
-// Компонент для таба с точным позиционированием
-const CustomTabBarItem = ({ label, icon, isFocused, onPress, color }) => {
-  return (
-    <View style={styles.tabItem}>
-      <View style={styles.iconWrapper}>
-        <Image 
-          source={icon}
-          style={[styles.tabIcon, { tintColor: color }]}
-          resizeMode="contain"
-        />
-      </View>
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
-    </View>
-  );
-};
-
 // Основной навигатор приложения
 const AppNavigator = () => {
   const insets = useSafeAreaInsets();
   
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      initialRouteName="HomeTab"
+      screenOptions={{
         tabBarActiveTintColor: COLORS.PRIMARY,
         tabBarInactiveTintColor: COLORS.GRAY_500,
         tabBarStyle: {
           backgroundColor: COLORS.SURFACE,
           borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
           height: 60 + insets.bottom,
-          paddingBottom: insets.bottom,
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          paddingHorizontal: 0,
-        },
-        tabBarShowLabel: true,
-        tabBarLabelPosition: 'below-icon',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          lineHeight: 16,
-          marginTop: 0,
-          paddingTop: 0,
-        },
-        tabBarItemStyle: {
-          flex: 1,
-          height: '100%',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingTop: 8,
           paddingBottom: insets.bottom,
         },
         headerShown: false,
-      })}
+        tabBarIconStyle: {
+          marginTop: Platform.OS === 'ios' ? 5 : 0,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginBottom: Platform.OS === 'ios' ? 0 : 5,
+        },
+        tabBarShowLabel: true,
+        tabBarAllowFontScaling: false,
+      }}
     >
       <Tab.Screen 
         name="HomeTab" 
         component={HomeStack} 
         options={{
           tabBarLabel: 'Главная',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/home.png')}
               style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
             />
           ),
         }}
@@ -216,11 +186,10 @@ const AppNavigator = () => {
         component={ExpensesListStack} 
         options={{
           tabBarLabel: 'Расходы',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/list.png')}
               style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
             />
           ),
         }}
@@ -230,11 +199,10 @@ const AppNavigator = () => {
         component={AddExpenseStack} 
         options={{
           tabBarLabel: 'Добавить',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/plus.png')}
               style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
             />
           ),
         }}
@@ -244,11 +212,10 @@ const AppNavigator = () => {
         component={AnalyticsStack} 
         options={{
           tabBarLabel: 'Аналитика',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/chart.png')}
               style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
             />
           ),
         }}
@@ -258,11 +225,10 @@ const AppNavigator = () => {
         component={SettingsStack} 
         options={{
           tabBarLabel: 'Настройки',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, size }) => (
             <Image 
               source={require('../../assets/icons/settings.png')}
               style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
             />
           ),
         }}
@@ -288,25 +254,9 @@ const AppNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapper: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
   tabIcon: {
     width: 24,
     height: 24,
-  },
-  tabLabel: {
-    fontSize: 12,
-    textAlign: 'center',
   }
 });
 
