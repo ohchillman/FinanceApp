@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Импорт экранов из соответствующих директорий
 import HomeScreen from '../screens/home/HomeScreen';
@@ -142,6 +142,8 @@ const SettingsStack = () => (
 
 // Основной навигатор приложения
 const AppNavigator = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={{
@@ -149,42 +151,36 @@ const AppNavigator = () => {
         tabBarInactiveTintColor: COLORS.GRAY_500,
         tabBarStyle: {
           backgroundColor: COLORS.SURFACE,
-          borderTopColor: COLORS.GRAY_200,
-          height: 60,
-          paddingBottom: 5,
-          paddingTop: 5,
-          // Добавляем safeAreaInsets для корректного отображения в safe area
-          paddingBottom: 10,
-          // Убираем тень и линию сверху
+          borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          borderTopWidth: 0,
+          height: 60 + insets.bottom,
+          paddingTop: 5,
+          paddingBottom: insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          marginBottom: 5,
+          marginBottom: insets.bottom > 0 ? 5 : 10,
         },
-        tabBarIconStyle: {
-          marginTop: 5,
+        tabBarItemStyle: {
+          paddingTop: 5,
         },
-        // Добавляем настройки для корректного отображения в safe area
-        safeAreaInsets: { bottom: 10 },
+        headerShown: false,
       }}
-      // Добавляем настройки для корректного отображения в safe area
-      safeAreaInsets={{ bottom: true }}
     >
       <Tab.Screen 
         name="HomeTab" 
         component={HomeStack} 
         options={{
           tabBarLabel: 'Главная',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Image 
-              source={require('../../assets/icons/home.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
-            />
+            <View style={styles.iconContainer}>
+              <Image 
+                source={require('../../assets/icons/home.png')}
+                style={[styles.tabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
@@ -193,13 +189,14 @@ const AppNavigator = () => {
         component={ExpensesListStack} 
         options={{
           tabBarLabel: 'Расходы',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Image 
-              source={require('../../assets/icons/list.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
-            />
+            <View style={styles.iconContainer}>
+              <Image 
+                source={require('../../assets/icons/list.png')}
+                style={[styles.tabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
@@ -208,13 +205,14 @@ const AppNavigator = () => {
         component={AddExpenseStack} 
         options={{
           tabBarLabel: 'Добавить',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Image 
-              source={require('../../assets/icons/plus.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
-            />
+            <View style={styles.iconContainer}>
+              <Image 
+                source={require('../../assets/icons/plus.png')}
+                style={[styles.tabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
@@ -223,13 +221,14 @@ const AppNavigator = () => {
         component={AnalyticsStack} 
         options={{
           tabBarLabel: 'Аналитика',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Image 
-              source={require('../../assets/icons/chart.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
-            />
+            <View style={styles.iconContainer}>
+              <Image 
+                source={require('../../assets/icons/chart.png')}
+                style={[styles.tabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
@@ -238,13 +237,14 @@ const AppNavigator = () => {
         component={SettingsStack} 
         options={{
           tabBarLabel: 'Настройки',
-          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Image 
-              source={require('../../assets/icons/settings.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-              resizeMode="contain"
-            />
+            <View style={styles.iconContainer}>
+              <Image 
+                source={require('../../assets/icons/settings.png')}
+                style={[styles.tabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
           ),
         }}
       />
@@ -255,7 +255,6 @@ const AppNavigator = () => {
         component={TextRecognitionStack} 
         options={{
           tabBarButton: () => null,
-          headerShown: false,
         }}
       />
       <Tab.Screen 
@@ -263,7 +262,6 @@ const AppNavigator = () => {
         component={VoiceRecognitionStack} 
         options={{
           tabBarButton: () => null,
-          headerShown: false,
         }}
       />
     </Tab.Navigator>
@@ -271,11 +269,15 @@ const AppNavigator = () => {
 };
 
 const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 30,
+    height: 30,
+  },
   tabIcon: {
     width: 24,
     height: 24,
-    alignSelf: 'center',
-    marginTop: 2,
   }
 });
 
